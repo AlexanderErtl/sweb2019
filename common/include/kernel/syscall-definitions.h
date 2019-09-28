@@ -17,3 +17,5 @@
 #define sc_createprocess 191
 #define sc_trace 252
 
+#define sc_sharedread 41
+#define sc_sharedwrite 42

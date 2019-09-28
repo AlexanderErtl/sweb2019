@@ -21,5 +21,8 @@ class Syscall
 
   static size_t createprocess(size_t path, size_t sleep);
   static void trace();
+
+  static size_t sharedwrite(size_t length, size_t string);
+  static void sharedread(size_t position, size_t length, size_t buffer);
 };
 

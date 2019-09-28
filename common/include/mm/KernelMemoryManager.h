@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ustl/ulist.h>
 #include "new.h"
 #include "SpinLock.h"
 #include "assert.h"
@@ -116,6 +117,8 @@ class KernelMemoryManager
     size_t getUsedKernelMemory(bool show_allocs);
     void startTracing();
     void stopTracing();
+
+    ustl::list<uint64 > shm_list_;
 
   protected:
     friend class PageManager;

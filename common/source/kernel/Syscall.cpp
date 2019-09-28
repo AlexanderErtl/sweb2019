@@ -7,6 +7,7 @@
 #include "UserProcess.h"
 #include "ProcessRegistry.h"
 #include "File.h"
+#include "KernelMemoryManager.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -49,6 +50,12 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_pseudols:
       VfsSyscall::readdir((const char*) arg1);
+      break;
+    case sc_sharedread:
+      sharedread(arg1, arg2, arg3);
+      break;
+    case sc_sharedwrite:
+      return_value = sharedwrite(arg1, arg2);
       break;
     default:
       kprintf("Syscall::syscall_exception: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -168,5 +175,37 @@ size_t Syscall::createprocess(size_t path, size_t sleep)
 void Syscall::trace()
 {
   currentThread->printBacktrace();
+}
+
+size_t Syscall::sharedwrite(size_t length, size_t string)
+{
+  pointer addr = KernelMemoryManager::instance()->allocateMemory(length, 0);
+  strncpy((char*)addr, (char*)string, length);
+  //shm_list_ still needs locking
+  KernelMemoryManager::instance()->shm_list_.emplace_back(addr);
+
+  return KernelMemoryManager::instance()->shm_list_.size() - 1;
+}
+
+void Syscall::sharedread(size_t position, size_t length, size_t buffer)
+{
+  auto it = KernelMemoryManager::instance()->shm_list_.begin();
+  size_t count = 0;
+  while (it != KernelMemoryManager::instance()->shm_list_.end()) {
+    if (count == position) {
+      break;
+    }
+    count++;
+    it++;
+  }
+  if (it == KernelMemoryManager::instance()->shm_list_.end()) {
+    return;
+  }
+
+  pointer addr = *it;
+  strncpy((char*)buffer, (char*)addr, length);
+  KernelMemoryManager::instance()->freeMemory(addr, 0);
+  // just erasing may invalidate the position returned by sharedwrite
+  KernelMemoryManager::instance()->shm_list_.erase(it);
 }
 
